@@ -27,6 +27,13 @@ services:
     ports: ["3000"]
     docker:
       path: ./Dockerfile
+  web:
+    project: ./src/web
+    language: ts
+    host: containerapp
+    ports: ["80"]
+    docker:
+      path: ./Dockerfile
 
 reqs:
   - name: azd

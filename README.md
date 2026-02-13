@@ -2,16 +2,22 @@
 
 A starter template for building AI-powered API services with the [GitHub Copilot SDK](https://github.com/github/copilot-sdk), deployed to Azure Container Apps.
 
-Unlike the [agent template](https://github.com/jongio/copilot-sdk-agent) (multi-turn chat + React UI), this template is for **one-shot AI endpoints** — summarize, classify, extract, rate — with no chat UI.
+Unlike the [agent template](https://github.com/jongio/copilot-sdk-agent) (multi-turn SSE streaming chat), this template is for **one-shot AI endpoints** — summarize, classify, extract, rate — with a simple test UI for sending requests and viewing JSON results.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────┐
+│  src/web (React + Vite)                         │
+│  - Test UI for sending requests to the API      │
+│  - Deployed as Azure Container App (external)   │
+└──────────────────────┬──────────────────────────┘
+                       │ /summarize, /health
+┌──────────────────────▼──────────────────────────┐
 │  src/api (Express + Copilot SDK)                │
 │  - POST /summarize  → one-shot AI processing    │
 │  - GET  /health     → health check              │
-│  - Deployed as Azure Container App              │
+│  - Deployed as Azure Container App (internal)   │
 └─────────────────────────────────────────────────┘
 ```
 

@@ -2,10 +2,11 @@
 
 ## Overview
 
-Copilot SDK service template — single-service API deployed to Azure Container Apps.
+Copilot SDK service template — API + web UI deployed to Azure Container Apps.
 
-- **`src/api/`** — Express API (TypeScript, Node 24). One-shot AI endpoints via `@github/copilot-sdk`. No chat UI.
-- **`infra/`** — Azure infrastructure (Bicep). One container app + ACR + Key Vault + monitoring.
+- **`src/api/`** — Express API (TypeScript, Node 24). One-shot AI endpoints via `@github/copilot-sdk`.
+- **`src/web/`** — React + Vite test UI. Sends JSON requests to the API and displays results.
+- **`infra/`** — Azure infrastructure (Bicep). Two container apps (API internal + Web external) + ACR + Key Vault + monitoring.
 
 ## Environment
 
@@ -17,7 +18,8 @@ Copilot SDK service template — single-service API deployed to Azure Container 
 | Task | Directory | Command |
 |---|---|---|
 | Run service | root | `azd app run` |
-| Install deps | `src/api` | `pnpm install` |
+| Install API deps | `src/api` | `pnpm install` |
+| Install Web deps | `src/web` | `pnpm install` |
 | Build | `src/api` | `pnpm run build` |
 | Dev | `src/api` | `pnpm run dev` |
 | Deploy to Azure | root | `azd up` |

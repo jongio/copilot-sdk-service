@@ -98,7 +98,7 @@ module containerAppsStack 'br/public:avm/ptn/azd/container-apps-stack:0.3.0' = {
 }
 
 // ===================== //
-// AZD Pattern: ACR Container App - API (single service, external)
+// AZD Pattern: ACR Container App - API (internal, accessed through web)
 // ===================== //
 
 module containerAppApi 'br/public:avm/ptn/azd/acr-container-app:0.4.0' = {
@@ -114,7 +114,7 @@ module containerAppApi 'br/public:avm/ptn/azd/acr-container-app:0.4.0' = {
     userAssignedIdentityResourceId: managedIdentity.outputs.resourceId
     principalId: managedIdentity.outputs.principalId
     targetPort: 3000
-    external: true
+    external: false
     ingressTransport: 'http'
     containerCpuCoreCount: '0.5'
     containerMemory: '1.0Gi'
@@ -122,6 +122,7 @@ module containerAppApi 'br/public:avm/ptn/azd/acr-container-app:0.4.0' = {
     containerMaxReplicas: 3
     env: [
       { name: 'PORT', value: '3000' }
+      { name: 'ALLOWED_ORIGINS', value: 'https://ca-web-${environmentName}-${resourceSuffix}.${containerAppsStack.outputs.defaultDomain}' }
       { name: 'GITHUB_TOKEN', secretRef: 'github-token' }
       {
         name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
@@ -139,9 +140,39 @@ module containerAppApi 'br/public:avm/ptn/azd/acr-container-app:0.4.0' = {
 }
 
 // ===================== //
+// AZD Pattern: ACR Container App - Web
+// ===================== //
+
+module containerAppWeb 'br/public:avm/ptn/azd/acr-container-app:0.4.0' = {
+  name: 'container-app-web'
+  params: {
+    name: 'ca-web-${environmentName}-${resourceSuffix}'
+    location: location
+    tags: union(tags, { 'azd-service-name': 'web' })
+    containerAppsEnvironmentName: containerAppsStack.outputs.environmentName
+    containerRegistryName: containerAppsStack.outputs.registryName
+    identityType: 'UserAssigned'
+    identityName: managedIdentity.outputs.name
+    userAssignedIdentityResourceId: managedIdentity.outputs.resourceId
+    principalId: managedIdentity.outputs.principalId
+    targetPort: 80
+    external: true
+    ingressTransport: 'auto'
+    containerCpuCoreCount: '0.25'
+    containerMemory: '0.5Gi'
+    containerMinReplicas: 1
+    containerMaxReplicas: 3
+    env: [
+      { name: 'API_URL', value: 'http://${containerAppApi.outputs.name}.internal.${containerAppsStack.outputs.defaultDomain}' }
+    ]
+  }
+}
+
+// ===================== //
 // Outputs
 // ===================== //
 
 output apiContainerAppUrl string = containerAppApi.outputs.uri
+output webContainerAppUrl string = containerAppWeb.outputs.uri
 output registryLoginServer string = containerAppsStack.outputs.registryLoginServer
 output registryName string = containerAppsStack.outputs.registryName
