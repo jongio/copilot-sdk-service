@@ -1,9 +1,15 @@
 import express from "express";
+import cors from "cors";
 import healthRoutes from "./routes/health.js";
 import summarizeRoutes from "./routes/summarize.js";
 
 const app = express();
 
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") ?? [];
+if (process.env.NODE_ENV !== "production") {
+  allowedOrigins.push("http://localhost:5173");
+}
+app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 app.use(healthRoutes);
 app.use(summarizeRoutes);
