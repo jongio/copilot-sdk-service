@@ -9,7 +9,7 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/summarize': 'http://localhost:3000',
+      '/rate': 'http://localhost:3000',
       '/health': 'http://localhost:3000',
     },
   },
