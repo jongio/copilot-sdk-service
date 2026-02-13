@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.azure/
+.env
+*.log
+infra/main.json
