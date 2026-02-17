@@ -66,7 +66,6 @@ gh auth refresh --scopes copilot
 ### 2. Install the [`azd app`](https://github.com/jongio/azd-app) extension
 
 ```bash
-azd config set alpha.extensions on
 azd extension source add -n jongio -t url -l https://jongio.github.io/azd-extensions/registry.json
 azd extension install jongio.azd.app
 ```
