@@ -13,6 +13,7 @@
     "dev": "pnpm exec tsx --watch index.ts"
   },
   "dependencies": {
+    "@azure/identity": "^4.13.0",
     "@github/copilot-sdk": "latest",
     "cors": "^2.8.6",
     "express": "^5.2.1"
