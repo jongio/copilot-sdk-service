@@ -15,9 +15,17 @@ async function getClient(): Promise<CopilotClient> {
 }
 
 router.post("/summarize", async (req, res) => {
-  const { text } = req.body as { text?: string };
-  if (!text) {
+  const { text } = req.body as { text?: unknown };
+  if (text === undefined || text === null) {
     res.status(400).json({ error: "Missing 'text' field" });
+    return;
+  }
+  if (typeof text !== "string" || text.trim().length === 0) {
+    res.status(400).json({ error: "'text' must be a non-empty string" });
+    return;
+  }
+  if (text.length > 50000) {
+    res.status(413).json({ error: "'text' exceeds maximum length of 50000 characters" });
     return;
   }
 

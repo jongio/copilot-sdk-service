@@ -3,8 +3,12 @@ import { useState, useEffect } from 'react'
 type Theme = 'dark' | 'light'
 
 function getInitialTheme(): Theme {
-  const stored = localStorage.getItem('theme')
-  if (stored === 'dark' || stored === 'light') return stored
+  try {
+    const stored = localStorage.getItem('theme')
+    if (stored === 'dark' || stored === 'light') return stored
+  } catch {
+    return 'dark'
+  }
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
@@ -13,7 +17,7 @@ export function useTheme() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
-    localStorage.setItem('theme', theme)
+    try { localStorage.setItem('theme', theme) } catch { /* ignore */ }
   }, [theme])
 
   const toggleTheme = () => setTheme(t => (t === 'dark' ? 'light' : 'dark'))

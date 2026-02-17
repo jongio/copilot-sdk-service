@@ -5,9 +5,14 @@ import summarizeRoutes from "./routes/summarize.js";
 
 const app = express();
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") ?? [];
+const allowedOrigins = (process.env.ALLOWED_ORIGINS?.split(",") ?? [])
+  .map((o) => o.trim())
+  .filter(Boolean);
 if (process.env.NODE_ENV !== "production") {
   allowedOrigins.push("http://localhost:5173");
+}
+if (allowedOrigins.length === 0) {
+  console.warn("⚠ No CORS origins configured. All cross-origin requests will be rejected.");
 }
 app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
