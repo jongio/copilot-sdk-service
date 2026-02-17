@@ -98,6 +98,43 @@ module containerAppsStack 'br/public:avm/ptn/azd/container-apps-stack:0.3.0' = {
 }
 
 // ===================== //
+// AI Services (Foundry)
+// ===================== //
+
+resource aiServicesAccount 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
+  name: 'ais-${environmentName}-${resourceSuffix}'
+  location: location
+  tags: tags
+  kind: 'AIServices'
+  sku: { name: 'S0' }
+  identity: { type: 'SystemAssigned' }
+  properties: {
+    customSubDomainName: 'ais-${environmentName}-${resourceSuffix}'
+    publicNetworkAccess: 'Enabled'
+  }
+}
+
+resource aiProject 'Microsoft.CognitiveServices/accounts/projects@2025-04-01-preview' = {
+  parent: aiServicesAccount
+  name: 'proj-${environmentName}'
+  location: location
+  tags: tags
+  identity: { type: 'SystemAssigned' }
+  properties: {}
+}
+
+// Cognitive Services OpenAI User role for the managed identity
+resource cognitiveServicesRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: aiServicesAccount
+  name: guid(aiServicesAccount.id, managedIdentity.outputs.principalId, 'Cognitive Services OpenAI User')
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd')
+    principalId: managedIdentity.outputs.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// ===================== //
 // AZD Pattern: ACR Container App - API (internal, accessed through web)
 // ===================== //
 
@@ -127,6 +164,14 @@ module containerAppApi 'br/public:avm/ptn/azd/acr-container-app:0.4.0' = {
       {
         name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
         value: monitoring.outputs.applicationInsightsConnectionString
+      }
+      {
+        name: 'AZURE_AI_FOUNDRY_PROJECT_ENDPOINT'
+        value: 'https://ais-${environmentName}-${resourceSuffix}.services.ai.azure.com/api/projects/proj-${environmentName}'
+      }
+      {
+        name: 'AZURE_DEPLOYMENT_NAME'
+        value: 'gpt-4o'
       }
     ]
     secrets: [
@@ -176,3 +221,4 @@ output apiContainerAppUrl string = containerAppApi.outputs.uri
 output webContainerAppUrl string = containerAppWeb.outputs.uri
 output registryLoginServer string = containerAppsStack.outputs.registryLoginServer
 output registryName string = containerAppsStack.outputs.registryName
+output foundryProjectEndpoint string = 'https://ais-${environmentName}-${resourceSuffix}.services.ai.azure.com/api/projects/proj-${environmentName}'
