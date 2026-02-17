@@ -39,3 +39,4 @@ output AZURE_CONTAINER_APP_API_URL string = resources.outputs.apiContainerAppUrl
 output AZURE_CONTAINER_APP_WEB_URL string = resources.outputs.webContainerAppUrl
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = resources.outputs.registryLoginServer
 output AZURE_CONTAINER_REGISTRY_NAME string = resources.outputs.registryName
+output AZURE_AI_FOUNDRY_PROJECT_ENDPOINT string = resources.outputs.foundryProjectEndpoint
