@@ -1,7 +1,18 @@
 import { Router } from "express";
 import { CopilotClient } from "@github/copilot-sdk";
+import { DefaultAzureCredential } from "@azure/identity";
 
 const router = Router();
+
+const credential = new DefaultAzureCredential();
+
+/** Get a bearer token for Azure OpenAI / Foundry endpoints */
+async function getAzureToken(): Promise<string> {
+  const tokenResponse = await credential.getToken(
+    "https://cognitiveservices.azure.com/.default"
+  );
+  return tokenResponse.token;
+}
 
 let client: CopilotClient | null = null;
 
@@ -23,9 +34,26 @@ router.post("/summarize", async (req, res) => {
 
   try {
     const copilot = await getClient();
-    const session = await copilot.createSession({
-      model: "gpt-4o",
-    });
+
+    const model = process.env.AZURE_DEPLOYMENT_NAME ?? "gpt-4o";
+
+    const sessionConfig: Record<string, unknown> = {
+      model,
+    };
+
+    // If Foundry endpoint is configured, use BYOM with managed identity
+    const endpoint = process.env.AZURE_AI_FOUNDRY_PROJECT_ENDPOINT;
+    if (endpoint) {
+      const bearerToken = await getAzureToken();
+      sessionConfig.provider = {
+        type: "openai",
+        baseUrl: `${endpoint.replace(/\/$/, "")}/openai/v1/`,
+        wireApi: "responses",
+        bearerToken,
+      };
+    }
+
+    const session = await copilot.createSession(sessionConfig);
 
     const result = await session.sendAndWait({
       prompt: `Summarize the following text in 2-3 concise sentences:\n\n${text}`,
