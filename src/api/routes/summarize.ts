@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { CopilotClient } from "@github/copilot-sdk";
+import { getSessionOptions } from "../model-config.js";
 
 const router = Router();
 
@@ -31,9 +32,8 @@ router.post("/summarize", async (req, res) => {
 
   try {
     const copilot = await getClient();
-    const session = await copilot.createSession({
-      model: "gpt-4o",
-    });
+    const options = await getSessionOptions({ streaming: false });
+    const session = await copilot.createSession(options);
 
     const result = await session.sendAndWait({
       prompt: `Summarize the following text in 2-3 concise sentences:\n\n${text}`,

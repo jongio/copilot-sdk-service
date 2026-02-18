@@ -13,8 +13,8 @@ export default function App() {
     <>
       <header className="app-header">
         <div>
-          <h1>Copilot SDK Service</h1>
-          <p>Test your service. Try sending text to summarize.</p>
+          <h1>Copilot SDK Chat</h1>
+          <p>Chat with the Copilot SDK. Try asking a question.</p>
         </div>
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
       </header>
@@ -25,7 +25,7 @@ export default function App() {
       <footer className="footer">
         Built with the <a href="https://github.com/github/copilot-sdk" target="_blank" rel="noopener noreferrer">Copilot SDK</a>
         {' · '}
-        <a href="https://github.com/jongio/copilot-sdk-service" target="_blank" rel="noopener noreferrer">View on GitHub</a>
+        <a href="https://github.com/azure-samples/copilot-sdk-service" target="_blank" rel="noopener noreferrer">View on GitHub</a>
       </footer>
     </>
   )

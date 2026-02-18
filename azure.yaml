@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/jongio/azd-app/main/schemas/v1.1/azure.yaml.json
 name: copilot-sdk-service
 metadata:
-  template: jongio/copilot-sdk-service
+  template: azure-samples/copilot-sdk-service
 
 hooks:
   preprovision:

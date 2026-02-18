@@ -19,6 +19,12 @@ param resourceSuffix string
 @description('Short environment name for constrained resources')
 param shortName string
 
+@description('Deploy Azure OpenAI for BYOM. Set to true to provision AI resources.')
+param useAzureModel bool = false
+
+@description('Azure OpenAI model deployment name')
+param azureModelName string = 'gpt-4o'
+
 // ===================== //
 // AZD Pattern: Monitoring (Log Analytics + App Insights)
 // ===================== //
@@ -98,6 +104,50 @@ module containerAppsStack 'br/public:avm/ptn/azd/container-apps-stack:0.3.0' = {
 }
 
 // ===================== //
+// Azure OpenAI (conditional, for BYOM)
+// ===================== //
+
+resource openai 'Microsoft.CognitiveServices/accounts@2024-10-01' = if (useAzureModel) {
+  name: 'oai-${environmentName}-${resourceSuffix}'
+  location: location
+  tags: tags
+  kind: 'OpenAI'
+  sku: {
+    name: 'S0'
+  }
+  properties: {
+    customSubDomainName: 'oai-${environmentName}-${resourceSuffix}'
+    publicNetworkAccess: 'Enabled'
+  }
+}
+
+resource openaiDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = if (useAzureModel) {
+  parent: openai
+  name: azureModelName
+  sku: {
+    name: 'GlobalStandard'
+    capacity: 10
+  }
+  properties: {
+    model: {
+      format: 'OpenAI'
+      name: azureModelName
+      version: '2024-08-06'
+    }
+  }
+}
+
+resource openaiRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (useAzureModel) {
+  scope: openai
+  name: guid(openai.id, managedIdentity.outputs.resourceId, '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd')
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd')
+    principalId: managedIdentity.outputs.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// ===================== //
 // AZD Pattern: ACR Container App - API (internal, accessed through web)
 // ===================== //
 
@@ -120,15 +170,22 @@ module containerAppApi 'br/public:avm/ptn/azd/acr-container-app:0.4.0' = {
     containerMemory: '1.0Gi'
     containerMinReplicas: 1
     containerMaxReplicas: 3
-    env: [
-      { name: 'PORT', value: '3000' }
-      { name: 'ALLOWED_ORIGINS', value: 'https://ca-web-${environmentName}-${resourceSuffix}.${containerAppsStack.outputs.defaultDomain}' }
-      { name: 'GITHUB_TOKEN', secretRef: 'github-token' }
-      {
-        name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-        value: monitoring.outputs.applicationInsightsConnectionString
-      }
-    ]
+    env: union(
+      [
+        { name: 'PORT', value: '3000' }
+        { name: 'ALLOWED_ORIGINS', value: 'https://ca-web-${environmentName}-${resourceSuffix}.${containerAppsStack.outputs.defaultDomain}' }
+        { name: 'GITHUB_TOKEN', secretRef: 'github-token' }
+        {
+          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+          value: monitoring.outputs.applicationInsightsConnectionString
+        }
+      ],
+      useAzureModel ? [
+        { name: 'MODEL_PROVIDER', value: 'azure' }
+        { name: 'MODEL_NAME', value: azureModelName }
+        { name: 'AZURE_OPENAI_ENDPOINT', value: openai.properties.endpoint }
+      ] : []
+    )
     secrets: [
       {
         name: 'github-token'
@@ -176,3 +233,4 @@ output apiContainerAppUrl string = containerAppApi.outputs.uri
 output webContainerAppUrl string = containerAppWeb.outputs.uri
 output registryLoginServer string = containerAppsStack.outputs.registryLoginServer
 output registryName string = containerAppsStack.outputs.registryName
+output azureOpenAiEndpoint string = useAzureModel ? openai.properties.endpoint : ''

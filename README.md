@@ -4,14 +4,15 @@ A starter template for building AI-powered API services with the [GitHub Copilot
 
 ## Overview
 
-Copilot SDK Service is a full-stack TypeScript application that demonstrates how to build **one-shot AI endpoints** using the GitHub Copilot SDK. Unlike the [agent template](https://github.com/jongio/copilot-sdk-agent) (multi-turn SSE streaming chat), this template is for request/response AI tasks — summarize, classify, extract, rate — with a test UI for sending requests and viewing JSON results.
+Copilot SDK Service is a full-stack TypeScript application that demonstrates how to build **AI-powered apps** using the GitHub Copilot SDK. It includes a chat endpoint with SSE streaming and a one-shot summarize endpoint, with a React chat UI for testing.
 
-- **Backend** (`src/api/`) — Express server that creates a Copilot SDK session, sends a prompt, and returns the completed result as JSON.
-- **Frontend** (`src/web/`) — React + Vite single-page app for testing endpoints, with dark/light mode and Markdown rendering.
+- **Backend** (`src/api/`) — Express server with chat (SSE streaming) and summarize (one-shot) endpoints via `@github/copilot-sdk`.
+- **Frontend** (`src/web/`) — React + Vite chat UI with SSE streaming, dark/light mode, and Markdown rendering.
 
 ## Features
 
-- **One-shot AI endpoints** — Request/response pattern using the Copilot SDK's `sendAndWait()`
+- **Chat + summarize endpoints** — SSE streaming chat via `/chat` and one-shot summarize via `/summarize`
+- **Three model paths** — GitHub default, GitHub specific model, or Azure BYOM with `DefaultAzureCredential`
 - **React test UI** — Modern chat-style interface with dark/light mode and Markdown/code rendering
 - **One-command local dev** — Run all services with `azd app run` via [`azd app`](https://github.com/jongio/azd-app)
 - **One-command Azure deployment** — Deploy to Azure Container Apps with `azd up`
@@ -20,27 +21,99 @@ Copilot SDK Service is a full-stack TypeScript application that demonstrates how
 
 ## How It Works (Copilot SDK)
 
-This template uses the GitHub Copilot SDK's **one-shot** pattern. Each API request creates a session, sends a single prompt, and waits for the complete response — no streaming, no multi-turn conversation.
+This template supports three model paths:
 
+### GitHub Default (no config)
 ```typescript
-import { CopilotClient } from "@github/copilot-sdk";
-
-// 1. Create a client with your GitHub token
-const client = new CopilotClient({ githubToken: process.env.GITHUB_TOKEN });
-
-// 2. Create a session with a model
-const session = await client.createSession({ model: "gpt-4o" });
-
-// 3. Send a prompt and wait for the complete response
-const result = await session.sendAndWait({
-  prompt: `Summarize the following text:\n\n${text}`,
-});
-
-// 4. Return the result as JSON
-res.json({ summary: result?.data?.content });
+const session = await client.createSession({});
+const result = await session.sendAndWait({ prompt: "Hello" });
 ```
 
-This differs from the [agent template](https://github.com/jongio/copilot-sdk-agent), which uses `createSession()` with tools and streams tokens via SSE for interactive chat. The service template is ideal for backend AI tasks that don't need real-time streaming.
+### GitHub Specific Model
+```typescript
+const session = await client.createSession({ model: "gpt-4o" });
+```
+
+### Azure BYOM (Bring Your Own Model)
+```typescript
+import { DefaultAzureCredential } from "@azure/identity";
+const credential = new DefaultAzureCredential();
+const { token } = await credential.getToken("https://cognitiveservices.azure.com/.default");
+
+const session = await client.createSession({
+  model: process.env.MODEL_NAME,
+  provider: {
+    type: "azure",
+    baseUrl: process.env.AZURE_OPENAI_ENDPOINT,
+    bearerToken: token,
+  },
+});
+```
+
+Configure via environment variables: `MODEL_PROVIDER`, `MODEL_NAME`, `AZURE_OPENAI_ENDPOINT`. See `src/api/model-config.ts`.
+
+### Testing Each Model Path
+
+All three paths can be tested locally. Set the environment variables before running the service.
+
+You can run with either [`azd app run`](https://github.com/jongio/azd-app) (starts both API and web UI) or `pnpm dev` (API only):
+
+**1. GitHub Default (no config needed)**
+
+No environment variables required — the SDK picks its default model:
+
+```bash
+# Option A: azd app run (recommended — starts API + web UI, auto-installs deps)
+azd app run
+
+# Option B: manual
+export GITHUB_TOKEN=$(gh auth token)
+cd src/api && pnpm dev
+```
+
+**2. GitHub Specific Model**
+
+Set `MODEL_NAME` to choose a specific GitHub-hosted model:
+
+```bash
+# Option A: azd app run
+azd env set MODEL_NAME gpt-4o
+azd app run
+
+# Option B: manual
+export GITHUB_TOKEN=$(gh auth token)
+export MODEL_NAME=gpt-4o
+cd src/api && pnpm dev
+```
+
+**3. Azure BYOM (Bring Your Own Model)**
+
+Set `MODEL_PROVIDER=azure` along with your Azure OpenAI endpoint and deployment name. Authentication uses `DefaultAzureCredential`, so make sure you're logged in with `az login`:
+
+```bash
+# Option A: azd app run
+az login
+azd env set MODEL_PROVIDER azure
+azd env set MODEL_NAME <your-deployment-name>
+azd env set AZURE_OPENAI_ENDPOINT https://<your-resource>.openai.azure.com
+azd app run
+
+# Option B: manual
+export GITHUB_TOKEN=$(gh auth token)
+export MODEL_PROVIDER=azure
+export MODEL_NAME=<your-deployment-name>
+export AZURE_OPENAI_ENDPOINT=https://<your-resource>.openai.azure.com
+az login
+cd src/api && pnpm dev
+```
+
+**Verify any path with:**
+
+```bash
+curl -X POST http://localhost:3100/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Hello"}'
+```
 
 ## Prerequisites
 
@@ -73,7 +146,7 @@ azd extension install jongio.azd.app
 ### 3. Init and run
 
 ```bash
-azd init -t jongio/copilot-sdk-service
+azd init -t azure-samples/copilot-sdk-service
 azd app run
 ```
 
@@ -105,8 +178,10 @@ copilot-sdk-service/
 ├── src/
 │   ├── api/                    # Express backend
 │   │   ├── index.ts            # App entry point — Express setup, CORS, route registration
+│   │   ├── model-config.ts    # Three-path model configuration (GitHub default/specific, Azure BYOM)
 │   │   ├── routes/
 │   │   │   ├── summarize.ts    # POST /summarize — Copilot SDK one-shot AI processing
+│   │   │   ├── chat.ts         # POST /chat — multi-turn chat with SSE streaming
 │   │   │   └── health.ts       # GET /health — Health check endpoint
 │   │   ├── Dockerfile          # API container (Node.js + pnpm, non-root user)
 │   │   ├── package.json        # API dependencies
@@ -154,7 +229,9 @@ const router = Router();
 
 router.post("/classify", async (req, res) => {
   const client = new CopilotClient({ githubToken: process.env.GITHUB_TOKEN });
-  const session = await client.createSession({ model: "gpt-4o" });
+  const { getSessionOptions } = await import("../model-config.js");
+  const options = await getSessionOptions();
+  const session = await client.createSession(options);
   const result = await session.sendAndWait({
     prompt: `Classify the following text into a category:\n\n${req.body.text}`,
   });
@@ -198,7 +275,7 @@ This single command handles the entire deployment pipeline:
 To initialize from the template without cloning:
 
 ```bash
-azd init --template jongio/copilot-sdk-service
+azd init --template azure-samples/copilot-sdk-service
 azd up
 ```
 
@@ -224,12 +301,12 @@ You can also run services individually:
 
 ```mermaid
 graph LR
-    User -->|JSON request| ReactUI["React UI<br/>(Vite SPA)"]
-    ReactUI -->|POST /summarize| API["Express API<br/>one-shot endpoints"]
-    API --> SDK["Copilot SDK<br/>sendAndWait"]
-    SDK --> Copilot["GitHub Copilot<br/>Service"]
-    Copilot -->|completed response| SDK
-    SDK -->|JSON result| API
+    User -->|message| ReactUI["React UI<br/>(Vite SPA)"]
+    ReactUI -->|POST /chat| API["Express API"]
+    API --> SDK["Copilot SDK"]
+    SDK --> Models["GitHub Models<br/>or Azure BYOM"]
+    Models -->|response| SDK
+    SDK -->|SSE stream| API
 ```
 
 **Azure deployment topology:**

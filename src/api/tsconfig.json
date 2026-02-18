@@ -10,5 +10,5 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["index.ts", "routes/**/*.ts"]
+  "include": ["index.ts", "model-config.ts", "routes/**/*.ts"]
 }
