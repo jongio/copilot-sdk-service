@@ -9,6 +9,7 @@ export default defineConfig({
   },
   server: {
     proxy: {
+      '/chat': 'http://localhost:3000',
       '/summarize': 'http://localhost:3000',
       '/health': 'http://localhost:3000',
     },

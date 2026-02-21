@@ -1,19 +1,8 @@
 import { Router } from "express";
-import { CopilotClient } from "@github/copilot-sdk";
-import { getSessionOptions } from "../model-config.js";
+import { getClient } from "../client.js";
+import { getSessionOptions, enhanceModelError } from "../model-config.js";
 
 const router = Router();
-
-let client: CopilotClient | null = null;
-
-async function getClient(): Promise<CopilotClient> {
-  if (!client) {
-    client = new CopilotClient({
-      githubToken: process.env.GITHUB_TOKEN,
-    });
-  }
-  return client;
-}
 
 router.post("/summarize", async (req, res) => {
   const { text } = req.body as { text?: unknown };
@@ -32,17 +21,21 @@ router.post("/summarize", async (req, res) => {
 
   try {
     const copilot = await getClient();
-    const options = await getSessionOptions({ streaming: false });
+    const options = await getSessionOptions();
     const session = await copilot.createSession(options);
 
-    const result = await session.sendAndWait({
-      prompt: `Summarize the following text in 2-3 concise sentences:\n\n${text}`,
-    });
+    const response = await session.sendAndWait(
+      { prompt: `Summarize the following text in 2-3 concise sentences:\n\n${text}` },
+      120_000,
+    );
 
-    res.json({ summary: result?.data?.content ?? "" });
+    const summary = (response?.data as { content?: string })?.content ?? "";
+    await session.destroy();
+
+    res.json({ summary });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Internal server error";
-    res.status(500).json({ error: message });
+    const enhanced = enhanceModelError(err);
+    res.status(500).json({ error: enhanced.message });
   }
 });
 

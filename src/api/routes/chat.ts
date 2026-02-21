@@ -1,18 +1,23 @@
 import { Router } from "express";
-import { CopilotClient } from "@github/copilot-sdk";
-import { getSessionOptions } from "../model-config.js";
+import { getClient } from "../client.js";
+import { getSessionOptions, enhanceModelError } from "../model-config.js";
 
 const router = Router();
 
-let client: CopilotClient | null = null;
+/** Wait for the session to become idle, with a configurable timeout. */
+function waitForIdle(session: { on(event: string, cb: (e: unknown) => void): () => void }, timeoutMs = 120_000): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      unsub();
+      reject(new Error(`Timeout after ${timeoutMs}ms waiting for response`));
+    }, timeoutMs);
 
-async function getClient(): Promise<CopilotClient> {
-  if (!client) {
-    client = new CopilotClient({
-      githubToken: process.env.GITHUB_TOKEN,
+    const unsub = session.on("session.idle", () => {
+      clearTimeout(timer);
+      unsub();
+      resolve();
     });
-  }
-  return client;
+  });
 }
 
 router.post("/chat", async (req, res) => {
@@ -39,34 +44,33 @@ router.post("/chat", async (req, res) => {
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
+  const prompt = Array.isArray(history) && history.length > 0
+    ? [...history.map((h: { role: string; content: string }) => `${h.role}: ${h.content}`), `user: ${message}`].join("\n")
+    : message;
+
   try {
     const copilot = await getClient();
     const options = await getSessionOptions({ streaming: true });
     const session = await copilot.createSession(options);
 
-    const prompt = Array.isArray(history) && history.length > 0
-      ? [...history.map((h: { role: string; content: string }) => `${h.role}: ${h.content}`), `user: ${message}`].join("\n")
-      : message;
-
-    // Stream incremental deltas to the client via SSE
-    const unsubscribe = session.on("assistant.message_delta", (event) => {
+    const unsubDelta = session.on("assistant.message_delta", (event: { data?: { deltaContent?: string } }) => {
       const delta = event.data?.deltaContent ?? "";
       if (delta) {
         res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
       }
     });
 
-    // send() returns when the message is queued; wait for session.idle via sendAndWait
-    // but with streaming events dispatched above
-    await session.sendAndWait({ prompt });
+    await session.send({ prompt });
+    await waitForIdle(session);
 
-    unsubscribe();
+    unsubDelta();
+    await session.destroy();
+
     res.write(`data: [DONE]\n\n`);
     res.end();
-    await session.destroy();
   } catch (err) {
-    const errMsg = err instanceof Error ? err.message : "Internal server error";
-    res.write(`event: error\ndata: ${JSON.stringify({ error: errMsg })}\n\n`);
+    const enhanced = enhanceModelError(err);
+    res.write(`event: error\ndata: ${JSON.stringify({ error: enhanced.message })}\n\n`);
     res.end();
   }
 });

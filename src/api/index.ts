@@ -16,7 +16,7 @@ if (allowedOrigins.length === 0) {
   console.warn("⚠ No CORS origins configured. All cross-origin requests will be rejected.");
 }
 app.use(cors({ origin: allowedOrigins }));
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 app.use(healthRoutes);
 app.use(summarizeRoutes);
 app.use(chatRoutes);

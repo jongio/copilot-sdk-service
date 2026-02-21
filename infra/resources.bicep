@@ -22,8 +22,23 @@ param shortName string
 @description('Deploy Azure OpenAI for BYOM. Set to true to provision AI resources.')
 param useAzureModel bool = false
 
-@description('Azure OpenAI model deployment name')
-param azureModelName string = 'gpt-4o'
+@description('Azure OpenAI model deployment name (must support Copilot SDK encrypted content)')
+@allowed([
+  'o4-mini'
+  'o3'
+  'o3-mini'
+  'gpt-5'
+  'gpt-5-mini'
+  'gpt-5.1'
+  'gpt-5.1-mini'
+  'gpt-5.1-nano'
+  'gpt-5.2-codex'
+  'codex-mini'
+])
+param azureModelName string = 'o4-mini'
+
+@description('Azure OpenAI model version (must match the model name; see `az cognitiveservices model list`)')
+param azureModelVersion string = '2025-04-16'
 
 // ===================== //
 // AZD Pattern: Monitoring (Log Analytics + App Insights)
@@ -118,6 +133,7 @@ resource openai 'Microsoft.CognitiveServices/accounts@2024-10-01' = if (useAzure
   properties: {
     customSubDomainName: 'oai-${environmentName}-${resourceSuffix}'
     publicNetworkAccess: 'Enabled'
+    disableLocalAuth: true
   }
 }
 
@@ -132,14 +148,14 @@ resource openaiDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024
     model: {
       format: 'OpenAI'
       name: azureModelName
-      version: '2024-08-06'
+      version: azureModelVersion
     }
   }
 }
 
 resource openaiRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (useAzureModel) {
   scope: openai
-  name: guid(openai.id, managedIdentity.outputs.resourceId, '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd')
+  name: guid(resourceGroup().id, 'openai-role', 'id-${environmentName}-${resourceSuffix}', '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd')
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd')
     principalId: managedIdentity.outputs.principalId
@@ -183,7 +199,8 @@ module containerAppApi 'br/public:avm/ptn/azd/acr-container-app:0.4.0' = {
       useAzureModel ? [
         { name: 'MODEL_PROVIDER', value: 'azure' }
         { name: 'MODEL_NAME', value: azureModelName }
-        { name: 'AZURE_OPENAI_ENDPOINT', value: openai.properties.endpoint }
+        { name: 'AZURE_OPENAI_ENDPOINT', value: openai!.properties.endpoint }
+        { name: 'AZURE_CLIENT_ID', value: managedIdentity.outputs.clientId }
       ] : []
     )
     secrets: [
@@ -233,4 +250,4 @@ output apiContainerAppUrl string = containerAppApi.outputs.uri
 output webContainerAppUrl string = containerAppWeb.outputs.uri
 output registryLoginServer string = containerAppsStack.outputs.registryLoginServer
 output registryName string = containerAppsStack.outputs.registryName
-output azureOpenAiEndpoint string = useAzureModel ? openai.properties.endpoint : ''
+output azureOpenAiEndpoint string = useAzureModel ? openai!.properties.endpoint : ''

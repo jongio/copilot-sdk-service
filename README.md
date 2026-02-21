@@ -209,7 +209,9 @@ copilot-sdk-service/
 │   ├── main.parameters.json    # Parameter mappings for azd
 │   └── resources.bicep         # All Azure resources (ACR, Container Apps, Key Vault, etc.)
 ├── scripts/                    # Automation scripts
-│   └── get-github-token.mjs    # Hook: injects GITHUB_TOKEN from gh CLI (runs on prerun and preprovision)
+│   ├── get-github-token.mjs    # Hook: injects GITHUB_TOKEN from gh CLI (runs on prerun and preprovision)
+│   ├── test-models.mts         # Integration tests for all 3 model configuration paths
+│   └── README.md               # Script documentation
 ├── azure.yaml                  # Azure Developer CLI service definition
 └── README.md
 ```
@@ -258,6 +260,68 @@ location /classify {
     proxy_set_header Host $proxy_host;
 }
 ```
+
+## Testing
+
+### Integration Tests
+
+The `scripts/test-models.mts` script verifies all 3 model configuration paths work correctly:
+
+```bash
+# Run from repo root
+npx tsx scripts/test-models.mts
+
+# Or from src/api
+cd src/api && pnpm test:models
+```
+
+**What it tests:**
+- ✅ GitHub Default model (no config)
+- ✅ GitHub Specific model (`MODEL_NAME=gpt-4o`)
+- ✅ Azure BYOM (requires Azure OpenAI resource)
+
+**Prerequisites:**
+- `GITHUB_TOKEN` — required for all tests: `export GITHUB_TOKEN=$(gh auth token)`
+- `AZURE_MODEL_NAME` and `AZURE_OPENAI_ENDPOINT` — required for the Azure BYOM test
+
+**Azure BYOM setup (choose one):**
+
+```bash
+# Option A: Deploy with azd (provisions Azure OpenAI automatically)
+azd up
+export AZURE_MODEL_NAME=$(azd env get-value AZURE_MODEL_NAME)
+export AZURE_OPENAI_ENDPOINT=$(azd env get-value AZURE_OPENAI_ENDPOINT)
+
+# Option B: Use an existing Azure OpenAI resource
+export AZURE_MODEL_NAME=<your-deployment-name>
+export AZURE_OPENAI_ENDPOINT=https://<your-resource>.openai.azure.com
+az login
+```
+
+**Example output:**
+
+```
+┌─────────────────────┬──────────┬─────────────┐
+│ Model Path          │ /chat    │ /summarize   │
+├─────────────────────┼──────────┼─────────────┤
+│ GitHub Default      │ ✅ PASS  │ ✅ PASS      │
+│ GitHub Specific     │ ✅ PASS  │ ✅ PASS      │
+│ Azure BYOM          │ ✅ PASS  │ ✅ PASS      │
+└─────────────────────┴──────────┴─────────────┘
+```
+
+See [`scripts/README.md`](scripts/README.md) for detailed setup instructions.
+
+### Verify Deployed App
+
+After deploying with `azd up` or `azd deploy`, verify the live app with `--deployed`:
+
+```bash
+export AZURE_CONTAINER_APP_WEB_URL=$(azd env get-value AZURE_CONTAINER_APP_WEB_URL)
+npx tsx scripts/test-models.mts --deployed
+```
+
+This tests the deployed `/health`, `/chat`, and `/summarize` endpoints against the live Azure Container App.
 
 ## Deploy to Azure
 

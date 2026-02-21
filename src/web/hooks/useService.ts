@@ -51,6 +51,9 @@ export function useService() {
               if (data === '[DONE]') continue
               try {
                 const parsed = JSON.parse(data)
+                if (parsed.error) {
+                  throw new Error(parsed.error)
+                }
                 if (parsed.content) {
                   content += parsed.content
                   messagesRef.current = messagesRef.current.map(m =>
@@ -58,11 +61,10 @@ export function useService() {
                   )
                   setMessages([...messagesRef.current])
                 }
-              } catch {
-                // skip malformed lines
+              } catch (e) {
+                if (e instanceof SyntaxError) continue
+                throw e
               }
-            } else if (line.startsWith('event: error')) {
-              // Next data line has the error
             }
           }
         }
