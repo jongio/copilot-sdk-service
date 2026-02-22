@@ -25,6 +25,12 @@ server {
         proxy_set_header Host $proxy_host;
     }
 
+    location /config {
+        proxy_pass ${API_URL}/config;
+        proxy_http_version 1.1;
+        proxy_set_header Host $proxy_host;
+    }
+
     location /health {
         proxy_pass ${API_URL}/health;
         proxy_http_version 1.1;

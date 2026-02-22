@@ -4,6 +4,7 @@
     "location": { "value": "${AZURE_LOCATION}" },
     "githubToken": { "value": "${GITHUB_TOKEN}" },
     "useAzureModel": { "value": "${USE_AZURE_MODEL=false}" },
-    "azureModelName": { "value": "gpt-4o" }
+    "azureModelName": { "value": "${AZURE_MODEL_NAME=o4-mini}" },
+    "azureModelVersion": { "value": "${AZURE_MODEL_VERSION=2025-04-16}" }
   }
 }
