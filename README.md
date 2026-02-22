@@ -1,23 +1,91 @@
-# Copilot SDK Service
+---
+page_type: sample
+languages:
+  - azdeveloper
+  - nodejs
+  - typescript
+  - bicep
+  - html
+  - css
+products:
+  - azure
+  - azure-container-apps
+  - azure-container-registry
+  - azure-key-vault
+  - azure-monitor
+  - ai-services
+  - github
+urlFragment: copilot-sdk-service
+name: Copilot SDK Service — Chat API with React UI on Azure Container Apps
+description: A full-stack TypeScript template using the GitHub Copilot SDK with SSE streaming chat and one-shot summarize endpoints, deployed to Azure Container Apps via azd.
+---
+<!-- YAML front-matter schema: https://review.learn.microsoft.com/en-us/help/contribute/samples/process/onboarding?branch=main#supported-metadata-fields-for-readmemd -->
 
-A starter template for building AI-powered API services with the [GitHub Copilot SDK](https://github.com/github/copilot-sdk) deployed to [Azure Container Apps](https://learn.microsoft.com/azure/container-apps/).
+# Copilot SDK Service — Chat API with React UI on Azure Container Apps
 
-## Overview
+[![Open in GitHub Codespaces](https://img.shields.io/static/v1?style=for-the-badge&label=GitHub+Codespaces&message=Open&color=brightgreen&logo=github)](https://codespaces.new/azure-samples/copilot-sdk-service)
+[![Open in Dev Container](https://img.shields.io/static/v1?style=for-the-badge&label=Dev+Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/azure-samples/copilot-sdk-service)
 
-Copilot SDK Service is a full-stack TypeScript application that demonstrates how to build **AI-powered apps** using the GitHub Copilot SDK. It includes a chat endpoint with SSE streaming and a one-shot summarize endpoint, with a React chat UI for testing.
+A starter template for building AI-powered API services with the [GitHub Copilot SDK](https://github.com/github/copilot-sdk) deployed to [Azure Container Apps](https://learn.microsoft.com/azure/container-apps/). It includes a chat endpoint with SSE streaming and a one-shot summarize endpoint, with a React chat UI for testing.
+
+Add your own source code and leverage the Infrastructure as Code assets (written in Bicep) to get up and running quickly. The template supports three model paths: GitHub default, GitHub specific model, or Azure Bring Your Own Model (BYOM) with `DefaultAzureCredential`.
+
+### Prerequisites
+
+The following prerequisites are required to use this application. Please ensure that you have them all installed locally.
+
+| Tool | Version | Purpose |
+|------|---------|---------|
+| [Azure Developer CLI (`azd`)](https://aka.ms/azd-install) | Latest | Provisions and deploys Azure resources |
+| [Node.js](https://nodejs.org/) | 24+ | Runtime for the API and build tooling |
+| [pnpm](https://pnpm.io/) | 10+ | Fast, disk-efficient package manager |
+| [GitHub CLI (`gh`)](https://cli.github.com/) | Latest | Provides the `GITHUB_TOKEN` for the Copilot SDK |
+| [Docker](https://docs.docker.com/get-docker/) | Latest | Required for Azure deployment (container builds) |
+
+**GitHub CLI setup:**
+
+```bash
+gh auth login
+gh auth refresh --scopes copilot
+```
+
+### Quickstart
+
+To learn how to get started with any template, follow the steps in [this quickstart](https://learn.microsoft.com/azure/developer/azure-developer-cli/get-started?tabs=localinstall&pivots=programming-language-nodejs) with this template (`Azure-Samples/copilot-sdk-service`).
+
+This quickstart will show you how to authenticate on Azure, initialize using a template, provision infrastructure and deploy code on Azure via the following commands:
+
+```bash
+# Log in to azd. Only required once per-install.
+azd auth login
+
+# First-time project setup. Initialize a project in the current directory, using this template.
+azd init --template Azure-Samples/copilot-sdk-service
+
+# Provision and deploy to Azure
+azd up
+```
+
+### Application Architecture
+
+This application utilizes the following Azure resources:
+
+- [**Azure Container Apps**](https://docs.microsoft.com/azure/container-apps/) to host the API backend and web frontend
+- [**Azure Container Registry**](https://docs.microsoft.com/azure/container-registry/) for Docker image storage
+- [**Azure Key Vault**](https://docs.microsoft.com/azure/key-vault/) for securing the `GITHUB_TOKEN`
+- [**Azure Monitor**](https://docs.microsoft.com/azure/azure-monitor/) for monitoring and logging
+- [**Azure OpenAI**](https://docs.microsoft.com/azure/ai-services/openai/) *(optional)* for Bring Your Own Model (BYOM)
+
+Here's a high level architecture diagram that illustrates these components. Notice that these are all contained within a single [resource group](https://docs.microsoft.com/azure/azure-resource-manager/management/manage-resource-groups-portal), that will be created for you when you create the resources.
+
+> This template provisions resources to an Azure subscription that you will select upon provisioning them. Please refer to the [Pricing calculator for Microsoft Azure](https://azure.microsoft.com/pricing/calculator/) and, if needed, update the included Azure resource definitions found in `infra/main.bicep` to suit your needs.
+
+### Application Code
+
+The template is structured to follow the [Azure Developer CLI](https://aka.ms/azure-dev/overview) conventions. You can learn more about `azd` architecture in [the official documentation](https://learn.microsoft.com/azure/developer/azure-developer-cli/make-azd-compatible?pivots=azd-create#understand-the-azd-architecture).
 
 - **Backend** (`src/api/`) — Express server with chat (SSE streaming) and summarize (one-shot) endpoints via `@github/copilot-sdk`.
 - **Frontend** (`src/web/`) — React + Vite chat UI with SSE streaming, dark/light mode, and Markdown rendering.
-
-## Features
-
-- **Chat + summarize endpoints** — SSE streaming chat via `/chat` and one-shot summarize via `/summarize`
-- **Three model paths** — GitHub default, GitHub specific model, or Azure BYOM with `DefaultAzureCredential`
-- **React test UI** — Modern chat-style interface with dark/light mode and Markdown/code rendering
-- **One-command local dev** — Run all services with `azd app run` via [`azd app`](https://github.com/jongio/azd-app)
-- **One-command Azure deployment** — Deploy to Azure Container Apps with `azd up`
-- **Docker-based containerization** — Multi-stage Dockerfiles for optimized production builds
-- **Automatic GitHub token provisioning** — Preprovision hook retrieves your token via `gh` CLI
 
 ## How It Works (Copilot SDK)
 
@@ -115,42 +183,20 @@ curl -X POST http://localhost:3100/chat \
   -d '{"message": "Hello"}'
 ```
 
-## Prerequisites
+### Local Development
 
-| Tool | Version | Purpose |
-|------|---------|---------|
-| [pnpm](https://pnpm.io/) | 10+ | Fast, disk-efficient package manager |
-| [Node.js](https://nodejs.org/) | 24+ | Runtime for the API and build tooling |
-| [GitHub CLI (`gh`)](https://cli.github.com/) | Latest | Provides the `GITHUB_TOKEN` for the Copilot SDK |
-| [Azure Developer CLI (`azd`)](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd) | Latest | Provisions and deploys Azure resources |
-| [Docker](https://docs.docker.com/get-docker/) | Latest | *(Optional)* Local container testing |
-
-**GitHub CLI setup:**
+The easiest way to run locally is with [`azd app`](https://github.com/jongio/azd-app), which starts all services, installs dependencies, and provides a real-time dashboard:
 
 ```bash
-gh auth login
-gh auth refresh --scopes copilot
-```
-
-## Quick Start
-
-### 1. Install [Azure Developer CLI (`azd`)](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd)
-
-### 2. Install the [`azd app`](https://github.com/jongio/azd-app) extension
-
-```bash
+# Install the azd app extension (one-time)
 azd extension source add -n jongio -t url -l https://jongio.github.io/azd-extensions/registry.json
 azd extension install jongio.azd.app
-```
 
-### 3. Init and run
-
-```bash
-azd init -t azure-samples/copilot-sdk-service
+# Run locally
 azd app run
 ```
 
-The `prerun` hook automatically retrieves your `GITHUB_TOKEN` from the `gh` CLI via `scripts/get-github-token.mjs` (the same script also runs as a `preprovision` hook during `azd up`). `azd app` installs dependencies, starts both services, and provides a real-time dashboard. Open the URL shown in the dashboard output to start testing.
+The `prerun` hook automatically retrieves your `GITHUB_TOKEN` from the `gh` CLI via `scripts/get-github-token.mjs`. Open the URL shown in the dashboard output to start testing.
 
 <details>
 <summary><b>Run services manually (without azd app)</b></summary>
@@ -171,50 +217,13 @@ cd src/web && pnpm dev
 
 </details>
 
-## Project Structure
-
-```
-copilot-sdk-service/
-├── src/
-│   ├── api/                    # Express backend
-│   │   ├── index.ts            # App entry point — Express setup, CORS, route registration
-│   │   ├── model-config.ts    # Three-path model configuration (GitHub default/specific, Azure BYOM)
-│   │   ├── routes/
-│   │   │   ├── summarize.ts    # POST /summarize — Copilot SDK one-shot AI processing
-│   │   │   ├── chat.ts         # POST /chat — multi-turn chat with SSE streaming
-│   │   │   └── health.ts       # GET /health — Health check endpoint
-│   │   ├── Dockerfile          # API container (Node.js + pnpm, non-root user)
-│   │   ├── package.json        # API dependencies
-│   │   └── tsconfig.json       # TypeScript config (server)
-│   └── web/                    # React frontend
-│       ├── App.tsx             # Root component
-│       ├── App.css             # App styles with dark/light mode
-│       ├── main.tsx            # React entry point
-│       ├── index.html          # HTML shell
-│       ├── index.css           # Global styles & CSS custom properties
-│       ├── types.ts            # Shared TypeScript types
-│       ├── components/
-│       │   ├── ChatWindow.tsx  # Message display with Markdown rendering
-│       │   ├── MessageInput.tsx# Input field with submit handling
-│       │   └── ThemeToggle.tsx # Dark/light mode toggle
-│       ├── hooks/
-│       │   ├── useService.ts   # Service request state management
-│       │   └── useTheme.ts     # Theme preference with localStorage
-│       ├── nginx.conf.template # Nginx config — reverse proxy to API
-│       ├── Dockerfile          # Web container (Vite build + nginx)
-│       ├── package.json        # Web dependencies
-│       └── vite.config.ts      # Vite configuration
-├── infra/                      # Azure infrastructure (Bicep)
-│   ├── main.bicep              # Subscription-scoped deployment
-│   ├── main.parameters.json    # Parameter mappings for azd
-│   └── resources.bicep         # All Azure resources (ACR, Container Apps, Key Vault, etc.)
-├── scripts/                    # Automation scripts
-│   ├── get-github-token.mjs    # Hook: injects GITHUB_TOKEN from gh CLI (runs on prerun and preprovision)
-│   ├── test-models.mts         # Integration tests for all 3 model configuration paths
-│   └── README.md               # Script documentation
-├── azure.yaml                  # Azure Developer CLI service definition
-└── README.md
-```
+| Command | Directory | Description |
+|---------|-----------|-------------|
+| `azd app run` | repo root | Start all services with auto-dependency install and dashboard |
+| `pnpm dev` | `src/api` | Start the Express server with hot reload (via `tsx --watch`) |
+| `pnpm dev` | `src/web` | Start the Vite dev server with HMR for the React frontend |
+| `pnpm build` | `src/api` | Compile the Express server |
+| `pnpm build` | `src/web` | Bundle the React frontend |
 
 ## Adding Endpoints
 
@@ -312,17 +321,6 @@ az login
 
 See [`scripts/README.md`](scripts/README.md) for detailed setup instructions.
 
-### Verify Deployed App
-
-After deploying with `azd up` or `azd deploy`, verify the live app with `--deployed`:
-
-```bash
-export AZURE_CONTAINER_APP_WEB_URL=$(azd env get-value AZURE_CONTAINER_APP_WEB_URL)
-npx tsx scripts/test-models.mts --deployed
-```
-
-This tests the deployed `/health`, `/chat`, and `/summarize` endpoints against the live Azure Container App.
-
 ## Deploy to Azure
 
 ```bash
@@ -336,71 +334,39 @@ This single command handles the entire deployment pipeline:
 3. **Builds and pushes** — Builds the Docker images and pushes them to the provisioned ACR
 4. **Deploys** — Deploys both containers to Azure Container Apps with the `GITHUB_TOKEN` securely referenced from Key Vault
 
-To initialize from the template without cloning:
+### Verify Deployed App
+
+After deploying, verify the live app:
 
 ```bash
-azd init --template azure-samples/copilot-sdk-service
-azd up
+export AZURE_CONTAINER_APP_WEB_URL=$(azd env get-value AZURE_CONTAINER_APP_WEB_URL)
+npx tsx scripts/test-models.mts --deployed
 ```
 
-## Development
+### Next Steps
 
-The easiest way to run locally is with [`azd app`](https://github.com/jongio/azd-app), which starts all services, installs dependencies, and provides a real-time dashboard:
+At this point, you have a complete application deployed on Azure. But there is much more that the Azure Developer CLI can do. These next steps will introduce you to additional commands that will make creating applications on Azure much easier. Using the Azure Developer CLI, you can setup your pipelines, monitor your application, test and debug locally.
 
-```bash
-azd app run
-```
+> Note: Needs to manually install [setup-azd extension](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.azd) for Azure DevOps (azdo).
 
-You can also run services individually:
+- [`azd pipeline config`](https://learn.microsoft.com/azure/developer/azure-developer-cli/configure-devops-pipeline?tabs=GitHub) - to configure a CI/CD pipeline (using GitHub Actions or Azure DevOps) to deploy your application whenever code is pushed to the main branch.
 
-| Command | Directory | Description |
-|---------|-----------|-------------|
-| `azd app run` | repo root | Start all services with auto-dependency install and dashboard |
-| `pnpm dev` | `src/api` | Start the Express server with hot reload (via `tsx --watch`) |
-| `pnpm dev` | `src/web` | Start the Vite dev server with HMR for the React frontend |
-| `pnpm build` | `src/api` | Compile the Express server |
-| `pnpm build` | `src/web` | Bundle the React frontend |
+- [`azd monitor`](https://learn.microsoft.com/azure/developer/azure-developer-cli/monitor-your-app) - to monitor the application and quickly navigate to the various Application Insights dashboards (e.g. overview, live metrics, logs)
 
-## Architecture
+- [Run and Debug Locally](https://learn.microsoft.com/azure/developer/azure-developer-cli/debug?pivots=ide-vs-code) - using Visual Studio Code and the Azure Developer CLI extension
 
-```mermaid
-graph LR
-    User -->|message| ReactUI["React UI<br/>(Vite SPA)"]
-    ReactUI -->|POST /chat| API["Express API"]
-    API --> SDK["Copilot SDK"]
-    SDK --> Models["GitHub Models<br/>or Azure BYOM"]
-    Models -->|response| SDK
-    SDK -->|SSE stream| API
-```
+- [`azd down`](https://learn.microsoft.com/azure/developer/azure-developer-cli/reference#azd-down) - to delete all the Azure resources created with this template
 
-**Azure deployment topology:**
+## Security
 
-```mermaid
-graph TB
-    Internet -->|HTTPS| Web["Web App<br/>(nginx + React SPA)"]
+### Roles
 
-    subgraph Azure Resource Group
-        subgraph Container Apps Environment
-            Web
-            API["API App<br/>(Express + Copilot SDK)"]
-        end
-        ACR["Container Registry<br/>(ACR)"]
-        KV["Azure Key Vault<br/>(GITHUB_TOKEN)"]
-        MI["Managed Identity"]
-        AI["App Insights"]
-    end
+This template creates a [managed identity](https://docs.microsoft.com/azure/active-directory/managed-identities-azure-resources/overview) for your app inside your Azure Active Directory tenant, and it is used to authenticate your app with Azure and other services that support Azure AD authentication like Key Vault via access policies. You will see principalId referenced in the infrastructure as code files, that refers to the id of the currently logged in Azure Developer CLI user, which will be granted access policies and permissions to run the application locally. To view your managed identity in the Azure Portal, follow these [steps](https://docs.microsoft.com/azure/active-directory/managed-identities-azure-resources/how-to-view-managed-identity-service-principal-portal).
 
-    Web -->|reverse proxy| API
-    API -->|pulls images| ACR
-    Web -->|pulls images| ACR
-    API -->|reads secrets| KV
-    MI -->|authenticates| API
-    MI -->|authenticates| Web
-    API -->|sends telemetry| AI
-```
+### Key Vault
 
-The Web container app is **external** (internet-facing) and serves the React SPA via nginx, which reverse-proxies API requests to the internal API container app. The API container app is **internal** (no public endpoint) and communicates with the GitHub Copilot service using a `GITHUB_TOKEN` stored securely in Azure Key Vault.
+This template uses [Azure Key Vault](https://docs.microsoft.com/azure/key-vault/general/overview) to securely store your `GITHUB_TOKEN` for the provisioned Copilot SDK service. Key Vault is a cloud service for securely storing and accessing secrets (API keys, passwords, certificates, cryptographic keys) and makes it simple to give other Azure services access to them. As you continue developing your solution, you may add as many secrets to your Key Vault as you require.
 
-## License
+## Reporting Issues and Feedback
 
-MIT
+If you have any feature requests, issues, or areas for improvement, please [file an issue](https://aka.ms/azure-dev/issues). To keep up-to-date, ask questions, or share suggestions, join our [GitHub Discussions](https://aka.ms/azure-dev/discussions). You may also contact us via AzDevTeam@microsoft.com.
