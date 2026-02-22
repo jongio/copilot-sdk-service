@@ -1,12 +1,18 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import type { Message } from '../types'
 
 export function useService() {
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const messagesRef = useRef<Message[]>([])
+  const abortRef = useRef<AbortController | null>(null)
 
-  const sendMessage = async (text: string) => {
+  const sendMessage = useCallback(async (text: string) => {
+    // Abort any in-flight request
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
     const userMsg: Message = { id: crypto.randomUUID(), role: 'user', content: text }
     const assistantId = crypto.randomUUID()
     const assistantMsg: Message = { id: assistantId, role: 'assistant', content: '' }
@@ -27,6 +33,7 @@ export function useService() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text, history: history.length > 0 ? history : undefined }),
+        signal: controller.signal,
       })
 
       if (!res.ok) {
@@ -36,14 +43,17 @@ export function useService() {
       const reader = res.body?.getReader()
       const decoder = new TextDecoder()
       let content = ''
+      let buffer = ''
 
       if (reader) {
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
 
-          const chunk = decoder.decode(value, { stream: true })
-          const lines = chunk.split('\n')
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          // Keep the last (possibly incomplete) line in the buffer
+          buffer = lines.pop() ?? ''
 
           for (const line of lines) {
             if (line.startsWith('data: ')) {
@@ -78,6 +88,7 @@ export function useService() {
         setMessages([...messagesRef.current])
       }
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
       messagesRef.current = messagesRef.current.map(m =>
         m.id === assistantId ? {
           ...m,
@@ -89,7 +100,7 @@ export function useService() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
   return { messages, isLoading, sendMessage }
 }

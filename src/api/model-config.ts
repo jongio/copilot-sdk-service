@@ -50,6 +50,13 @@ async function getAzureBearerToken(): Promise<string> {
     cachedCredential = new DefaultAzureCredential();
   }
   const result = await cachedCredential.getToken("https://cognitiveservices.azure.com/.default");
+  if (!result) {
+    throw new Error(
+      "Failed to acquire Azure bearer token. " +
+      "Ensure the app has a managed identity with 'Cognitive Services OpenAI User' role, " +
+      "or that local credentials (az login / AZURE_CLIENT_ID) are configured."
+    );
+  }
   cachedToken = { token: result.token, expiresOn: result.expiresOnTimestamp };
   return result.token;
 }

@@ -1,8 +1,20 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, lazy, Suspense } from 'react'
 import ReactMarkdown from 'react-markdown'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import type { Message } from '../types'
+
+// Lazy-load syntax highlighting (the largest dependency) to reduce initial bundle
+const LazyHighlighter = lazy(() =>
+  Promise.all([
+    import('react-syntax-highlighter/dist/esm/prism-light'),
+    import('react-syntax-highlighter/dist/esm/styles/prism/one-dark'),
+  ]).then(([{ default: SyntaxHighlighter }, { default: oneDark }]) => ({
+    default: ({ language, code }: { language: string; code: string }) => (
+      <SyntaxHighlighter style={oneDark} language={language} PreTag="div">
+        {code}
+      </SyntaxHighlighter>
+    ),
+  }))
+)
 
 interface Props {
   messages: Message[]
@@ -74,13 +86,9 @@ export function ChatWindow({ messages, isStreaming }: Props) {
                       return (
                         <div className="code-block-wrapper">
                           <CopyButton text={code} />
-                          <SyntaxHighlighter
-                            style={oneDark}
-                            language={match[1]}
-                            PreTag="div"
-                          >
-                            {code}
-                          </SyntaxHighlighter>
+                          <Suspense fallback={<pre><code>{code}</code></pre>}>
+                            <LazyHighlighter language={match[1]} code={code} />
+                          </Suspense>
                         </div>
                       )
                     }

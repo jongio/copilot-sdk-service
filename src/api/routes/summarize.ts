@@ -4,6 +4,11 @@ import { getSessionOptions, enhanceModelError } from "../model-config.js";
 
 const router = Router();
 
+interface SummarizeSession {
+  sendAndWait(msg: { prompt: string }, timeout: number): Promise<{ data?: unknown } | undefined>;
+  destroy(): Promise<void>;
+}
+
 router.post("/summarize", async (req, res) => {
   const { text } = req.body as { text?: unknown };
   if (text === undefined || text === null) {
@@ -19,10 +24,11 @@ router.post("/summarize", async (req, res) => {
     return;
   }
 
+  let session: SummarizeSession | null = null;
   try {
     const copilot = await getClient();
     const options = await getSessionOptions();
-    const session = await copilot.createSession(options);
+    session = await copilot.createSession(options) as unknown as SummarizeSession;
 
     const response = await session.sendAndWait(
       { prompt: `Summarize the following text in 2-3 concise sentences:\n\n${text}` },
@@ -30,12 +36,12 @@ router.post("/summarize", async (req, res) => {
     );
 
     const summary = (response?.data as { content?: string })?.content ?? "";
-    await session.destroy();
-
     res.json({ summary });
   } catch (err) {
     const enhanced = enhanceModelError(err);
     res.status(500).json({ error: enhanced.message });
+  } finally {
+    await session?.destroy();
   }
 });
 
