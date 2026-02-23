@@ -2,102 +2,52 @@
 
 Utility scripts for the Copilot SDK Service.
 
-## `test-models.mts`
+## Integration Tests (formerly `test-models.mts`)
 
-Integration test script that verifies all 3 model configuration paths work correctly across both API endpoints (`/chat` and `/summarize`).
+Integration tests have moved to `tests/integration/` and now use **Vitest**. The old `scripts/test-models.mts` script has been removed.
 
-### Test Configurations
+### Running Locally
 
-1. **GitHub Default** - Uses SDK's default model selection
-   - No `MODEL_PROVIDER` or `MODEL_NAME` set
-   - SDK automatically picks the default GitHub model
-
-2. **GitHub Specific** - Uses a specific GitHub model
-   - `MODEL_NAME=gpt-4o`
-   - No `MODEL_PROVIDER` set
-
-3. **Azure BYOM** - Bring Your Own Model using Azure OpenAI
-   - `MODEL_PROVIDER=azure`
-   - `MODEL_NAME=<deployment-name>`
-   - `AZURE_OPENAI_ENDPOINT=<endpoint-url>`
-   - Uses `DefaultAzureCredential` for authentication
-
-### Prerequisites
-
-**Required for all tests:**
-- `GITHUB_TOKEN` - GitHub personal access token with Copilot access
-
-**Required for Azure BYOM tests:**
-- `AZURE_MODEL_NAME` - Azure OpenAI deployment name
-- `AZURE_OPENAI_ENDPOINT` - Azure OpenAI endpoint URL
-- Azure authentication configured (via `az login` or environment variables)
-
-### Usage
-
-From the repository root:
+From the integration test directory:
 ```bash
-npx tsx scripts/test-models.mts
+cd tests/integration && pnpm install && pnpm test
 ```
 
-Or from the `src/api` directory:
+Or from the API directory:
 ```bash
-pnpm test:models
+cd src/api && pnpm test:models
 ```
 
-### Environment Setup
+### Running Against a Deployed App
 
-#### GitHub Token
+Set the deployed app URL, then run:
 ```bash
-export GITHUB_TOKEN=<your-github-token>
+export AZURE_CONTAINER_APP_WEB_URL=<your-deployed-url>
+cd src/api && pnpm test:deployed
 ```
 
-#### Azure BYOM - Option A (using azd)
-```bash
-azd up
-export AZURE_MODEL_NAME=$(azd env get-value AZURE_MODEL_NAME)
-export AZURE_OPENAI_ENDPOINT=$(azd env get-value AZURE_OPENAI_ENDPOINT)
-```
-
-#### Azure BYOM - Option B (existing resource)
-```bash
-export AZURE_MODEL_NAME=<your-deployment-name>
-export AZURE_OPENAI_ENDPOINT=https://<your-resource>.openai.azure.com
-az login
-```
-
-### Output
-
-The script runs tests for each configuration and outputs a summary table:
-
-```
-┌─────────────────────┬──────────┬─────────────┐
-│ Model Path          │ /chat    │ /summarize   │
-├─────────────────────┼──────────┼─────────────┤
-│ GitHub Default      │ ✅ PASS  │ ✅ PASS      │
-│ GitHub Specific     │ ✅ PASS  │ ✅ PASS      │
-│ Azure BYOM          │ ✅ PASS  │ ✅ PASS      │
-└─────────────────────┴──────────┴─────────────┘
-```
-
-Exit code: `0` if all tests pass, `1` if any fail.
-
-### Verify Deployed App
-
-After deploying with `azd up` or `azd deploy`, verify the live Azure endpoints:
-
+You can obtain the URL from azd:
 ```bash
 export AZURE_CONTAINER_APP_WEB_URL=$(azd env get-value AZURE_CONTAINER_APP_WEB_URL)
-npx tsx scripts/test-models.mts --deployed
 ```
 
-This hits the deployed `/health`, `/chat`, and `/summarize` endpoints and reports pass/fail.
+### CI Usage
 
-### Debugging
-
-Set `DEBUG=1` to see server output:
+Set the required environment variables and run — there are no interactive prompts in CI:
 ```bash
-DEBUG=1 npx tsx scripts/test-models.mts
+export GITHUB_TOKEN=<token>
+export AZURE_OPENAI_ENDPOINT=<endpoint-url>
+export AZURE_MODEL_NAME=<deployment-name>
+cd tests/integration && pnpm install && pnpm test
 ```
+
+### Interactive Azure Setup (Local Only)
+
+When running locally without Azure environment variables (`AZURE_OPENAI_ENDPOINT`, `AZURE_MODEL_NAME`), an interactive prompt will offer to load values from existing `azd` environments or run `azd up` to provision resources.
+
+### Skipping Azure Tests
+
+To skip Azure BYOM tests, simply don't set the Azure environment variables (`AZURE_OPENAI_ENDPOINT`, `AZURE_MODEL_NAME`). The tests use `describe.skipIf` and will be automatically skipped when those variables are absent.
 
 ## `get-github-token.mjs`
 

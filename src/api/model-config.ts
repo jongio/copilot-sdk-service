@@ -7,8 +7,6 @@ const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
 /**
  * Models known to support the Copilot SDK's encrypted content format.
  * The SDK encrypts prompts before sending — only these model families can decrypt them.
- * Note: wireApi must be "completions" (not "responses") because the Responses API
- * requires store=true for multi-turn tool calls, but the SDK sets store=false.
  */
 const SUPPORTED_MODEL_PREFIXES = [
   "o3", "o4-mini", "gpt-5", "codex-mini",
@@ -94,7 +92,7 @@ export async function getSessionOptions(opts?: { streaming?: boolean }): Promise
         type: "azure",
         baseUrl: endpoint.replace(/\/$/, ""),
         bearerToken,
-        wireApi: "completions",
+        wireApi: "responses",
         azure: { apiVersion: "2025-04-01-preview" },
       },
     };

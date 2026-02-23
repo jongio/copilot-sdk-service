@@ -120,7 +120,7 @@ describe("getSessionOptions", () => {
         type: "azure",
         baseUrl: "https://my.openai.azure.com", // trailing slash stripped
         bearerToken: "mock-bearer-token",
-        wireApi: "completions",
+        wireApi: "responses",
         azure: { apiVersion: "2025-04-01-preview" },
       },
     });

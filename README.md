@@ -274,11 +274,11 @@ location /classify {
 
 ### Integration Tests
 
-The `scripts/test-models.mts` script verifies all 3 model configuration paths work correctly:
+Integration tests live in `tests/integration/` and use **Vitest** to verify all 3 model configuration paths:
 
 ```bash
-# Run from repo root
-npx tsx scripts/test-models.mts
+# Run from the integration test directory
+cd tests/integration && pnpm install && pnpm test
 
 # Or from src/api
 cd src/api && pnpm test:models
@@ -287,37 +287,15 @@ cd src/api && pnpm test:models
 **What it tests:**
 - ✅ GitHub Default model (no config)
 - ✅ GitHub Specific model (`MODEL_NAME=gpt-4o`)
-- ✅ Azure BYOM (requires Azure OpenAI resource)
+- ✅ Azure BYOM (auto-skipped if not configured)
 
 **Prerequisites:**
-- `GITHUB_TOKEN` — required for all tests: `export GITHUB_TOKEN=$(gh auth token)`
-- `AZURE_MODEL_NAME` and `AZURE_OPENAI_ENDPOINT` — required for the Azure BYOM test
+- `GITHUB_TOKEN` — required for all tests (auto-resolved from `gh auth token` if not set)
+- `AZURE_MODEL_NAME` and `AZURE_OPENAI_ENDPOINT` — optional, for Azure BYOM tests
 
-**Azure BYOM setup (choose one):**
+**Local usage:** When running locally without Azure env vars, an interactive prompt offers to load values from `azd` environments or run `azd up`. To skip Azure tests, just don't set the Azure env vars.
 
-```bash
-# Option A: Deploy with azd (provisions Azure OpenAI automatically)
-azd up
-export AZURE_MODEL_NAME=$(azd env get-value AZURE_MODEL_NAME)
-export AZURE_OPENAI_ENDPOINT=$(azd env get-value AZURE_OPENAI_ENDPOINT)
-
-# Option B: Use an existing Azure OpenAI resource
-export AZURE_MODEL_NAME=<your-deployment-name>
-export AZURE_OPENAI_ENDPOINT=https://<your-resource>.openai.azure.com
-az login
-```
-
-**Example output:**
-
-```
-┌─────────────────────┬──────────┬─────────────┐
-│ Model Path          │ /chat    │ /summarize   │
-├─────────────────────┼──────────┼─────────────┤
-│ GitHub Default      │ ✅ PASS  │ ✅ PASS      │
-│ GitHub Specific     │ ✅ PASS  │ ✅ PASS      │
-│ Azure BYOM          │ ✅ PASS  │ ✅ PASS      │
-└─────────────────────┴──────────┴─────────────┘
-```
+**CI usage:** Set env vars (`GITHUB_TOKEN`, `AZURE_OPENAI_ENDPOINT`, `AZURE_MODEL_NAME`, `CI=true`) and run — no interactive prompts.
 
 See [`scripts/README.md`](scripts/README.md) for detailed setup instructions.
 
@@ -340,7 +318,7 @@ After deploying, verify the live app:
 
 ```bash
 export AZURE_CONTAINER_APP_WEB_URL=$(azd env get-value AZURE_CONTAINER_APP_WEB_URL)
-npx tsx scripts/test-models.mts --deployed
+cd src/api && pnpm test:deployed
 ```
 
 ### Next Steps
